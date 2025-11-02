@@ -14,6 +14,7 @@ interface Profile {
   height: number;
   weight: number;
   goal: string;
+  sex: string;
 }
 
 export default function Profile() {
@@ -23,6 +24,7 @@ export default function Profile() {
     height: 0,
     weight: 0,
     goal: '',
+    sex: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [earnedAchievements, setEarnedAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
@@ -189,6 +191,23 @@ export default function Profile() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-300">Sex</label>
+                  <select
+                    value={profile.sex}
+                    onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
+                    className="mt-1 block w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    <option value="">Select sex</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="prefer not to say">Prefer not to say</option>
+                  </select>
+                  {profile.sex === 'prefer not to say' && (
+                    <p className="text-xs text-yellow-400 mt-1">Your recommendations will not be fully accurate because of this.</p>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-300">Fitness Goal</label>
                   <select
                     value={profile.goal}
@@ -229,6 +248,13 @@ export default function Profile() {
                   <p className="text-lg text-white">{profile.weight ? `${profile.weight} kg` : 'Not set'}</p>
                 </div>
                 <div>
+                  <p className="text-sm font-medium text-gray-300">Sex</p>
+                  <p className="text-lg text-white">{profile.sex ? profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1) : 'Not set'}</p>
+                  {profile.sex === 'prefer not to say' && (
+                    <p className="text-xs text-yellow-400 mt-1">Your recommendations will not be fully accurate because of this.</p>
+                  )}
+                </div>
+                <div>
                   <p className="text-sm font-medium text-gray-300">Fitness Goal</p>
                   <p className="text-lg text-white">{profile.goal || 'Not set'}</p>
                 </div>
@@ -249,6 +275,8 @@ export default function Profile() {
                   </p>
                 )}
               </div>
+              {/* 
+              -- Old Daily Caloric intake recommendations before AI implementation --
               <div>
                 <p className="text-sm font-medium text-gray-300">Recommended Daily Calories</p>
                 <p className="text-2xl font-bold text-green-400">
@@ -259,7 +287,7 @@ export default function Profile() {
                   ) : 'Set profile first'}
                 </p>
                 <p className="text-sm text-gray-300">Based on your profile and goal</p>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -391,6 +419,7 @@ export default function Profile() {
                     height: 0,
                     weight: 0,
                     goal: '',
+                    sex: '',
                   });
                   alert('Profile cleared successfully.');
                 }

@@ -29,6 +29,7 @@ export default function Header() {
               <Link href="/diet" className={linkClass('/diet')}>Diet</Link>
               <Link href="/progress" className={linkClass('/progress')}>Progress</Link>
               <Link href="/leaderboards" className={linkClass('/leaderboards')}>Leaderboards</Link>
+              <Link href="/recommendations" className={linkClass('/recommendations')}>Recommendations</Link>
               <Link href="/profile" className={linkClass('/profile')}>Profile</Link>
             </nav>
           </div>
