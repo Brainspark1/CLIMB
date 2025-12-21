@@ -6,29 +6,31 @@
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint . --ext .js,.ts,.tsx",
     "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.7.0",
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^5.22.0",
+    "@types/pg": "^8.16.0",
     "chart.js": "^4.5.1",
-    "next": "15.5.5",
-    "react": "19.1.0",
+    "next": "^16.1.0",
+    "pg": "^8.16.3",
+    "react": "^18.3.0",
     "react-chartjs-2": "^5.3.0",
-    "react-dom": "19.1.0"
+    "react-dom": "^18.3.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.5",
-    "prisma": "^5.7.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.1.0",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.0",
     "typescript": "^5"

@@ -1,17 +1,9 @@
-# Backend Implementation for Leaderboards
+# Resolve Build Errors
 
 ## Steps to Complete
 
-- [x] Install Prisma ORM and dependencies (prisma, @prisma/client)
-- [x] Create prisma/schema.prisma with User, Workout, Meal models
-- [x] Initialize Prisma and generate client
-- [x] Create API route: /api/workouts (CRUD operations)
-- [x] Create API route: /api/meals (CRUD operations)
-- [x] Create API route: /api/leaderboards (aggregated stats)
-- [x] Seed database with some default users for initial leaderboards
-- [x] Run Prisma migrations
-- [ ] Update src/app/workouts/page.tsx to use API instead of localStorage
-- [ ] Update src/app/diet/page.tsx to use API instead of localStorage
-- [ ] Update src/app/leaderboards/page.tsx to fetch real data from API
-- [ ] Test API routes and frontend integration
-- [ ] Ensure leaderboards display real aggregated data
+- [x] Fix eslint version in package.json to ^9.0.0
+- [x] Keep schema.prisma as PostgreSQL for Neon
+- [ ] Run npm install --legacy-peer-deps
+- [ ] Run npx prisma generate
+- [ ] Run npm run build
