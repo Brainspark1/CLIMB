@@ -6,13 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id        String   @id @default(cuid())
-  name      String
+  name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -30,9 +30,11 @@ model Workout {
   sets     Int
   reps     Int
   weight   Float
-  date     String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date     DateTime @default(now())
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@map("workouts")
 }
 
@@ -44,19 +46,23 @@ model Meal {
   protein  Int
   carbs    Int
   fat      Int
-  date     String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date     DateTime @default(now())
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@map("meals")
 }
 
 model Achievement {
-  id        String   @id @default(cuid())
-  userId    String
+  id            String   @id @default(cuid())
+  userId        String
   achievementId String
-  earnedDate DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  earnedDate    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
+  @@index([userId])
   @@map("achievements")
 }
