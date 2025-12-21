@@ -2,35 +2,135 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
+import { useState, useEffect } from 'react';
 
 export default function Header() {
   const pathname = usePathname();
+  const [streak, setStreak] = useState(() => {
+    // Load streak from localStorage on initial render
+    const savedStreak = localStorage.getItem('userStreak');
+    return savedStreak ? parseInt(savedStreak, 10) : 0;
+  });
 
   const linkClass = (path: string) =>
     `text-green-400 hover:text-green-300 ${
       pathname === path ? 'font-bold text-green-300' : ''
     }`;
 
+  const getStreakColor = (days: number | null) => {
+    if (days === null || days === 0) return 'text-gray-400';
+    if (days === 1) return 'text-blue-400';
+    if (days === 2) return 'text-green-400';
+    if (days === 3) return 'text-purple-400';
+    if (days === 4) return 'text-yellow-400';
+    if (days === 5) return 'text-orange-400';
+    return 'text-red-400'; // 6+ days
+  };
+
+  const getUserId = async (): Promise<string | null> => {
+    const savedProfile = localStorage.getItem('profile');
+    let userName = 'Anonymous User';
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      userName = profile.name || 'Anonymous User';
+    }
+
+    // First, try to find user by name
+    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
+    if (findResponse.ok) {
+      const user = await findResponse.json();
+      localStorage.setItem('userId', user.id);
+      return user.id;
+    } else {
+      // Create new user
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: userName }),
+      });
+      if (createResponse.ok) {
+        const user = await createResponse.json();
+        localStorage.setItem('userId', user.id);
+        return user.id;
+      }
+    }
+    return null;
+  };
+
+  const calculateStreak = (workouts: { date: string }[]) => {
+    if (workouts.length === 0) return 0;
+
+    const workoutDates = workouts.map(w => w.date).sort();
+    let currentStreak = 1;
+    let maxStreak = 1;
+
+    for (let i = 1; i < workoutDates.length; i++) {
+      const prevDate = new Date(workoutDates[i - 1]);
+      const currDate = new Date(workoutDates[i]);
+      const diffTime = currDate.getTime() - prevDate.getTime();
+      const diffDays = diffTime / (1000 * 3600 * 24);
+
+      if (diffDays === 1) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 1;
+      }
+    }
+
+    return maxStreak;
+  };
+
+  useEffect(() => {
+    const loadStreak = async () => {
+      const userId = await getUserId();
+      if (userId) {
+        const response = await fetch(`/api/workouts?userId=${userId}`);
+        if (response.ok) {
+          const workouts = await response.json();
+          const userStreak = calculateStreak(workouts);
+          setStreak(userStreak);
+          localStorage.setItem('userStreak', userStreak.toString());
+        }
+      }
+    };
+
+    loadStreak();
+  }, []);
+
   return (
     <header className="bg-gray-800 shadow-sm border-b border-gray-700">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-[90px]">
-          <img
-            src="/logo.png"
-            alt="Fitness Tracker Logo"
-            className="h-[220px] w-auto object-contain"
-            draggable="false"
-          />
+          <div className="flex items-center space-x-4">
+            {/* Wrap image in Link */}
+            <Link href="/">
+            <img
+                src="/logo.png"
+                alt="Fitness Tracker Logo"
+                className="h-[220px] w-auto object-contain"
+                draggable="false"
+                width="220"
+                height="220"
+              />
+            </Link>
+          </div>
+
           <div className="flex items-center space-x-6">
-            <nav className="space-x-6 text-lg">
-              <Link href="/" className={linkClass('/')}>Dashboard</Link>
+            <nav className="flex items-center space-x-6 text-lg">
+              {/* <Link href="/" className={linkClass('/')}>Dashboard</Link> */}
               <Link href="/workouts" className={linkClass('/workouts')}>Workouts</Link>
               <Link href="/diet" className={linkClass('/diet')}>Diet</Link>
-              <Link href="/progress" className={linkClass('/progress')}>Progress</Link>
+              {/* <Link href="/progress" className={linkClass('/progress')}>Progress</Link> */}
               <Link href="/leaderboards" className={linkClass('/leaderboards')}>Leaderboards</Link>
               <Link href="/recommendations" className={linkClass('/recommendations')}>Recommendations</Link>
               <Link href="/profile" className={linkClass('/profile')}>Profile</Link>
+              {streak > 0 && (
+                <div className="flex flex-col items-center ml-4">
+                  <span className={`text-2xl ${getStreakColor(streak)}`}>🔥</span>
+                  <span className="text-xs text-gray-300">{streak}d</span>
+                </div>
+              )}
             </nav>
           </div>
         </div>

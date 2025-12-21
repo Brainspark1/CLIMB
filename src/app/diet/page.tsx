@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import { useAchievements } from '../components/AchievementProvider';
+import AchievementProvider, { useAchievements } from '../components/AchievementProvider';
 
 interface Meal {
   id: string;
@@ -24,7 +24,38 @@ export default function Diet() {
   const [fat, setFat] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string>('');
   const { triggerAchievementCheck } = useAchievements();
+
+  const getUserId = async (): Promise<string | null> => {
+    const savedProfile = localStorage.getItem('profile');
+    let userName = 'You';
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      userName = profile.name || 'You';
+    }
+
+    // First, try to find user by name
+    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
+    if (findResponse.ok) {
+      const user = await findResponse.json();
+      localStorage.setItem('userId', user.id);
+      return user.id;
+    } else {
+      // Create new user
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: userName }),
+      });
+      if (createResponse.ok) {
+        const user = await createResponse.json();
+        localStorage.setItem('userId', user.id);
+        return user.id;
+      }
+    }
+    return null;
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -32,9 +63,15 @@ export default function Diet() {
       // Simulate loading time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const savedMeals = localStorage.getItem('meals');
-      if (savedMeals) {
-        setMeals(JSON.parse(savedMeals));
+      const id = await getUserId();
+      setUserId(id || '');
+
+      if (id) {
+        const response = await fetch(`/api/meals?userId=${id!}`);
+        if (response.ok) {
+          const data = await response.json();
+          setMeals(data);
+        }
       }
 
       setIsLoading(false);
@@ -43,45 +80,64 @@ export default function Diet() {
     loadData();
   }, []);
 
-  const saveMeals = (newMeals: Meal[]) => {
-    localStorage.setItem('meals', JSON.stringify(newMeals));
-    setMeals(newMeals);
-  };
-
-  const addMeal = (e: React.FormEvent) => {
+  const addMeal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !calories || !protein || !carbs || !fat) return;
+    if (!name || !calories || !protein || !carbs || !fat || !userId) return;
 
-    const newMeal: Meal = {
-      id: Date.now().toString(),
-      name,
-      calories: parseInt(calories),
-      protein: parseInt(protein),
-      carbs: parseInt(carbs),
-      fat: parseInt(fat),
-      date: new Date().toISOString().split('T')[0],
-    };
+    const currentUserId = userId;
+    if (!currentUserId) return;
 
-    const newMeals = [...meals, newMeal];
-    saveMeals(newMeals);
+    try {
+      const response = await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          name,
+          calories: parseInt(calories),
+          protein: parseInt(protein),
+          carbs: parseInt(carbs),
+          fat: parseInt(fat),
+          date: new Date().toISOString().split('T')[0],
+        }),
+      });
 
-    // Check for achievements
-    const savedProfile = localStorage.getItem('profile');
-    const savedWorkouts = localStorage.getItem('workouts');
-    const workouts = savedWorkouts ? JSON.parse(savedWorkouts) : [];
-    const data = { workouts, meals: newMeals, profile: savedProfile ? JSON.parse(savedProfile) : null };
-    triggerAchievementCheck(data);
+      if (response.ok) {
+        const newMeal = await response.json();
+        const newMeals = [...meals, newMeal];
+        setMeals(newMeals);
 
-    setName('');
-    setCalories('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
+        // Check for achievements
+        const savedProfile = localStorage.getItem('profile');
+        const workoutsResponse = await fetch(`/api/workouts?userId=${currentUserId}`);
+        const workouts = workoutsResponse.ok ? await workoutsResponse.json() : [];
+        const data = { workouts, meals: newMeals, profile: savedProfile ? JSON.parse(savedProfile) : null };
+        triggerAchievementCheck(data);
+
+        setName('');
+        setCalories('');
+        setProtein('');
+        setCarbs('');
+        setFat('');
+      }
+    } catch (error) {
+      console.error('Failed to add meal:', error);
+    }
   };
 
-  const deleteMeal = (id: string) => {
-    const newMeals = meals.filter(m => m.id !== id);
-    saveMeals(newMeals);
+  const deleteMeal = async (id: string) => {
+    try {
+      const response = await fetch(`/api/meals?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const newMeals = meals.filter(m => m.id !== id);
+        setMeals(newMeals);
+      }
+    } catch (error) {
+      console.error('Failed to delete meal:', error);
+    }
   };
 
   const filteredMeals = meals.filter(meal =>
@@ -94,14 +150,15 @@ export default function Diet() {
   const totalFat = filteredMeals.reduce((sum, meal) => sum + meal.fat, 0);
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <Header />
+    <AchievementProvider>
+      <div className="min-h-screen bg-gray-900">
+        <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {isLoading ? (
-          <LoadingSkeleton />
-        ) : (
-          <>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : (
+            <>
             <h2 className="text-3xl font-bold text-white mb-8">Track Your Diet</h2>
 
         {/* Search Bar */}
@@ -222,10 +279,11 @@ export default function Diet() {
               ))}
             </tbody>
           </table>
+            </div>
+              </>
+            )}
+          </main>
         </div>
-          </>
-        )}
-      </main>
-    </div>
+    </AchievementProvider>
   );
 }

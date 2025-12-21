@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workouts     Workout[]
+  meals        Meal[]
+  achievements Achievement[]
+
+  @@map("users")
+}
+
+model Workout {
+  id       String   @id @default(cuid())
+  userId   String
+  exercise String
+  sets     Int
+  reps     Int
+  weight   Float
+  date     String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("workouts")
+}
+
+model Meal {
+  id       String   @id @default(cuid())
+  userId   String
+  name     String
+  calories Int
+  protein  Int
+  carbs    Int
+  fat      Int
+  date     String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("meals")
+}
+
+model Achievement {
+  id        String   @id @default(cuid())
+  userId    String
+  achievementId String
+  earnedDate DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("achievements")
+}

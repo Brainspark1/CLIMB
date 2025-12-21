@@ -29,55 +29,92 @@ export default function Leaderboards() {
   const [currentUser, setCurrentUser] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getUserId = async (): Promise<string | null> => {
+    const savedProfile = localStorage.getItem('profile');
+    let userName = 'Anonymous User';
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      userName = profile.name || 'Anonymous User';
+    }
+
+    // First, try to find user by name
+    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
+    if (findResponse.ok) {
+      const user = await findResponse.json();
+      localStorage.setItem('userId', user.id);
+      return user.id;
+    } else {
+      // Create new user
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: userName }),
+      });
+      if (createResponse.ok) {
+        const user = await createResponse.json();
+        localStorage.setItem('userId', user.id);
+        return user.id;
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       // Simulate loading time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Simulate leaderboard data - in a real app, this would come from an API
-      const mockData: UserStats[] = [
-        { id: '1', name: 'Alex Johnson', totalWorkouts: 45, totalWeight: 12500, totalCalories: 8500, streak: 12 },
-        { id: '2', name: 'Sarah Chen', totalWorkouts: 42, totalWeight: 11800, totalCalories: 9200, streak: 8 },
-        { id: '3', name: 'Mike Rodriguez', totalWorkouts: 38, totalWeight: 15200, totalCalories: 7800, streak: 15 },
-        { id: '4', name: 'Emma Davis', totalWorkouts: 35, totalWeight: 9800, totalCalories: 10200, streak: 6 },
-        { id: '5', name: 'James Wilson', totalWorkouts: 32, totalWeight: 13600, totalCalories: 8900, streak: 10 },
-      ];
+      try {
+        // Fetch real leaderboard data from API
+        const response = await fetch('/api/leaderboards');
+        if (response.ok) {
+          const allUsers = await response.json();
 
-      // Get current user's stats from localStorage
-      const savedWorkouts = localStorage.getItem('workouts');
-      const savedMeals = localStorage.getItem('meals');
-      const savedProfile = localStorage.getItem('profile');
+          // Get current user's ID and stats
+          const userId = await getUserId();
+          let currentUserStats = null;
+          let updatedLeaderboards = allUsers;
 
-      let userName = 'You';
-      if (savedProfile) {
-        const profile = JSON.parse(savedProfile);
-        userName = profile.name || 'You';
+          if (userId) {
+            currentUserStats = allUsers.find((user: UserStats) => user.id === userId);
+            // Update the current user in the leaderboards list to show their name with (You)
+            if (currentUserStats) {
+              const savedProfile = localStorage.getItem('profile');
+              let displayName = 'Anonymous User';
+              if (savedProfile) {
+                const profile = JSON.parse(savedProfile);
+                displayName = profile.name || 'Anonymous User';
+              }
+              displayName = displayName === 'Anonymous User' ? 'You' : `${displayName} (You)`;
+
+              updatedLeaderboards = allUsers.map((user: UserStats) =>
+                user.id === userId ? { ...user, name: displayName } : user
+              );
+              currentUserStats = { ...currentUserStats, name: displayName };
+            }
+          }
+
+          setCurrentUser(currentUserStats); 
+          setLeaderboards(updatedLeaderboards);
+        } else {
+          // Fallback to empty leaderboards if API fails
+          setLeaderboards([]);
+        }
+      } catch (error) {
+        console.error('Failed to load leaderboards:', error);
+        setLeaderboards([]);
       }
-
-      const workouts = savedWorkouts ? JSON.parse(savedWorkouts) : [];
-      const meals = savedMeals ? JSON.parse(savedMeals) : [];
-
-      const userStats: UserStats = {
-        id: 'current',
-        name: userName,
-        totalWorkouts: workouts.length,
-        totalWeight: workouts.reduce((sum: number, w: Workout) => sum + (w.weight * w.sets * w.reps), 0),
-        totalCalories: meals.reduce((sum: number, m: Meal) => sum + m.calories, 0),
-        streak: calculateStreak(workouts),
-      };
-
-      setCurrentUser(userStats);
-
-      // Add current user to leaderboard and sort
-      const allUsers = [...mockData, userStats].sort((a, b) => b.totalWorkouts - a.totalWorkouts);
-      setLeaderboards(allUsers);
 
       setIsLoading(false);
     };
 
     loadData();
   }, []);
+
+  const getCurrentUserId = async (): Promise<string | null> => {
+    return await getUserId();
+  };
 
   const calculateStreak = (workouts: Workout[]) => {
     // Simple streak calculation - consecutive days with workouts
@@ -129,18 +166,20 @@ export default function Leaderboards() {
           <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
             <h3 className="text-xl font-semibold text-white mb-4">🏆 Overall Leaderboard</h3>
             <div className="space-y-3">
-              {leaderboards.map((user, index) => (
+              {[...leaderboards]
+                .sort((a, b) => b.totalWeight - a.totalWeight)
+                .map((user, index) => (
                 <div
                   key={user.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
-                    user.id === 'current' ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
+                    user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-white font-bold">{getRankIcon(index)}</span>
                     <div>
-                      <p className={`font-medium ${user.id === 'current' ? 'text-green-300' : 'text-white'}`}>
-                        {user.name} {user.id === 'current' && '(You)'}
+                      <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
+                        {user.name}
                       </p>
                       <p className="text-sm text-gray-300">{user.totalWorkouts} workouts</p>
                     </div>
@@ -164,14 +203,14 @@ export default function Leaderboards() {
                 <div
                   key={user.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
-                    user.id === 'current' ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
+                    user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-white font-bold">{getRankIcon(index)}</span>
                     <div>
-                      <p className={`font-medium ${user.id === 'current' ? 'text-green-300' : 'text-white'}`}>
-                        {user.name} {user.id === 'current' && '(You)'}
+                      <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
+                        {user.name}
                       </p>
                       <p className="text-sm text-gray-300">{user.streak} day streak</p>
                     </div>
@@ -195,14 +234,14 @@ export default function Leaderboards() {
                 <div
                   key={user.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
-                    user.id === 'current' ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
+                    user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-white font-bold">{getRankIcon(index)}</span>
                     <div>
-                      <p className={`font-medium ${user.id === 'current' ? 'text-green-300' : 'text-white'}`}>
-                        {user.name} {user.id === 'current' && '(You)'}
+                      <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
+                        {user.name}
                       </p>
                       <p className="text-sm text-gray-300">{user.totalCalories} calories tracked</p>
                     </div>

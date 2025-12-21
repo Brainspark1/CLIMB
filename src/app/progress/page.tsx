@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';  
+import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 
@@ -28,20 +28,55 @@ export default function Progress() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getUserId = async (): Promise<string | null> => {
+    const savedProfile = localStorage.getItem('profile');
+    let userName = 'You';
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      userName = profile.name || 'You';
+    }
+
+    // First, try to find user by name
+    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
+    if (findResponse.ok) {
+      const user = await findResponse.json();
+      localStorage.setItem('userId', user.id);
+      return user.id;
+    } else {
+      // Create new user
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: userName }),
+      });
+      if (createResponse.ok) {
+        const user = await createResponse.json();
+        localStorage.setItem('userId', user.id);
+        return user.id;
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       // Simulate loading time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const savedWorkouts = localStorage.getItem('workouts');
-      if (savedWorkouts) {
-        setWorkouts(JSON.parse(savedWorkouts));
-      }
+      const userId = await getUserId();
+      if (userId) {
+        const workoutsResponse = await fetch(`/api/workouts?userId=${userId}`);
+        if (workoutsResponse.ok) {
+          const workoutsData = await workoutsResponse.json();
+          setWorkouts(workoutsData);
+        }
 
-      const savedMeals = localStorage.getItem('meals');
-      if (savedMeals) {
-        setMeals(JSON.parse(savedMeals));
+        const mealsResponse = await fetch(`/api/meals?userId=${userId}`);
+        if (mealsResponse.ok) {
+          const mealsData = await mealsResponse.json();
+          setMeals(mealsData);
+        }
       }
 
       setIsLoading(false);

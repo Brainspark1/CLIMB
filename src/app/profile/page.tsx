@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import AchievementBadge from '../components/AchievementBadge';
 import AchievementPopup from '../components/AchievementPopup';
+import AchievementProvider, { useAchievements } from '../components/AchievementProvider';
 import { ACHIEVEMENTS, getEarnedAchievements, checkAchievements, saveAchievements, AchievementData } from '../utils/achievements';
-import { useAchievements } from '../components/AchievementProvider';
  
 interface Profile {
   name: string;
@@ -28,41 +28,68 @@ export default function Profile() {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [earnedAchievements, setEarnedAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
-  const [newAchievements, setNewAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
-  const [showPopup, setShowPopup] = useState(false);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<{ id: string; title: string; description: string; icon: string } | null>(null);
+  const [isLoadingAchievements, setIsLoadingAchievements] = useState(true);
   const { triggerAchievementCheck } = useAchievements();
 
-  useEffect(() => {
+  const getUserId = async (): Promise<string | null> => {
     const savedProfile = localStorage.getItem('profile');
+    let userName = 'Anonymous User';
     if (savedProfile) {
-      setProfile(JSON.parse(savedProfile));
+      const profile = JSON.parse(savedProfile);
+      userName = profile.name || 'Anonymous User';
     }
 
-    // Load achievements
-    const achievements = getEarnedAchievements();
-    setEarnedAchievements(achievements);
-
-    // Check for new achievements
-    const workouts = JSON.parse(localStorage.getItem('workouts') || '[]');
-    const meals = JSON.parse(localStorage.getItem('meals') || '[]');
-    const data: AchievementData = { workouts, meals, profile: savedProfile ? JSON.parse(savedProfile) : null };
-
-    const newEarned = checkAchievements(data);
-    if (newEarned.length > 0) {
-      saveAchievements(newEarned);
-      setNewAchievements(newEarned);
-      setEarnedAchievements([...achievements, ...newEarned]);
-
-      // Show popup for first new achievement
-      if (newEarned.length > 0) {
-        const achievement = ACHIEVEMENTS.find(a => a.id === newEarned[0].id);
-        if (achievement) {
-          setCurrentPopupAchievement(achievement);
-          setShowPopup(true);
-        }
+    // First, try to find user by name
+    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
+    if (findResponse.ok) {
+      const user = await findResponse.json();
+      localStorage.setItem('userId', user.id);
+      return user.id;
+    } else {
+      // Create new user
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: userName }),
+      });
+      if (createResponse.ok) {
+        const user = await createResponse.json();
+        localStorage.setItem('userId', user.id);
+        return user.id;
       }
     }
+    return null;
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      const savedProfile = localStorage.getItem('profile');
+      if (savedProfile) {
+        setProfile(JSON.parse(savedProfile));
+      }
+
+      // Load achievements from database
+      const userId = await getUserId();
+      if (userId) {
+        try {
+          const response = await fetch(`/api/achievements?userId=${userId}`);
+          if (response.ok) {
+            const achievements = await response.json();
+            setEarnedAchievements(achievements.map((a: any) => ({ id: a.achievementId, earnedDate: a.earnedDate })));
+          }
+        } catch (error) {
+          console.error('Failed to load achievements:', error);
+        }
+      } else {
+        // Fallback to localStorage
+        const achievements = getEarnedAchievements();
+        setEarnedAchievements(achievements);
+      }
+
+      setIsLoadingAchievements(false);
+    };
+
+    loadData();
   }, []);
 
   const saveProfile = (newProfile: Profile) => {
@@ -109,22 +136,6 @@ export default function Profile() {
       case 'Normal weight':
       default:
         return 'text-gray-300';
-    }
-  };
-
-  const handlePopupClose = () => {
-    setShowPopup(false);
-    setCurrentPopupAchievement(null);
-
-    // Show next achievement if there are more
-    const remaining = newAchievements.slice(1);
-    if (remaining.length > 0) {
-      setNewAchievements(remaining);
-      const achievement = ACHIEVEMENTS.find(a => a.id === remaining[0].id);
-      if (achievement) {
-        setCurrentPopupAchievement(achievement);
-        setTimeout(() => setShowPopup(true), 500); // Small delay for better UX
-      }
     }
   };
 
@@ -386,10 +397,28 @@ export default function Profile() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (confirm('Are you sure you want to clear all workout history? This action cannot be undone.')) {
-                  localStorage.removeItem('workouts');
-                  alert('Workout history cleared successfully.');
+                  const userId = localStorage.getItem('userId');
+                  if (userId) {
+                    try {
+                      const response = await fetch(`/api/workouts?userId=${userId}`, {
+                        method: 'DELETE',
+                      });
+                      if (response.ok) {
+                        alert('Workout history cleared successfully.');
+                        window.location.reload();
+                      } else {
+                        alert('Failed to clear workout history.');
+                      }
+                    } catch (error) {
+                      alert('Failed to clear workout history.');
+                    }
+                  } else {
+                    // Fallback to localStorage if no userId
+                    localStorage.removeItem('workouts');
+                    alert('Workout history cleared successfully.');
+                  }
                 }
               }}
               className="bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 transition-colors font-medium"
@@ -398,10 +427,28 @@ export default function Profile() {
             </button>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (confirm('Are you sure you want to clear all diet history? This action cannot be undone.')) {
-                  localStorage.removeItem('meals');
-                  alert('Diet history cleared successfully.');
+                  const userId = localStorage.getItem('userId');
+                  if (userId) {
+                    try {
+                      const response = await fetch(`/api/meals?userId=${userId}`, {
+                        method: 'DELETE',
+                      });
+                      if (response.ok) {
+                        alert('Diet history cleared successfully.');
+                        window.location.reload();
+                      } else {
+                        alert('Failed to clear diet history.');
+                      }
+                    } catch (error) {
+                      alert('Failed to clear diet history.');
+                    }
+                  } else {
+                    // Fallback to localStorage if no userId
+                    localStorage.removeItem('meals');
+                    alert('Diet history cleared successfully.');
+                  }
                 }
               }}
               className="bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 transition-colors font-medium"
@@ -410,18 +457,37 @@ export default function Profile() {
             </button>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (confirm('Are you sure you want to clear your profile? This will reset all your personal information. This action cannot be undone.')) {
-                  localStorage.removeItem('profile');
-                  setProfile({
-                    name: '',
-                    age: 0,
-                    height: 0,
-                    weight: 0,
-                    goal: '',
-                    sex: '',
-                  });
-                  alert('Profile cleared successfully.');
+                  const userId = localStorage.getItem('userId');
+                  if (userId) {
+                    try {
+                      // Clear all user data from database
+                      await Promise.all([
+                        fetch(`/api/workouts?userId=${userId}`, { method: 'DELETE' }),
+                        fetch(`/api/meals?userId=${userId}`, { method: 'DELETE' }),
+                        fetch(`/api/achievements?userId=${userId}`, { method: 'DELETE' }),
+                      ]);
+                      alert('Profile and all data cleared successfully.');
+                      window.location.reload();
+                    } catch (error) {
+                      alert('Failed to clear profile data.');
+                    }
+                  } else {
+                    // Fallback to localStorage if no userId
+                    localStorage.removeItem('profile');
+                    localStorage.removeItem('workouts');
+                    localStorage.removeItem('meals');
+                    setProfile({
+                      name: '',
+                      age: 0,
+                      height: 0,
+                      weight: 0,
+                      goal: '',
+                      sex: '',
+                    });
+                    alert('Profile cleared successfully.');
+                  }
                 }
               }}
               className="bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 transition-colors font-medium"
@@ -431,15 +497,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Achievement Popup */}
-        {showPopup && currentPopupAchievement && (
-          <AchievementPopup
-            title={currentPopupAchievement.title}
-            description={currentPopupAchievement.description}
-            icon={currentPopupAchievement.icon}
-            onClose={handlePopupClose}
-          />
-        )}
+
       </main>
     </div>
   );

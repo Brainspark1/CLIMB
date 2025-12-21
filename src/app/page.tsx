@@ -69,6 +69,36 @@ export default function Home() {
   const pathname = usePathname(); // 👈 Get current path
   const { triggerAchievementCheck } = useAchievements();
 
+  const getUserId = async (): Promise<string | null> => {
+    const savedProfile = localStorage.getItem('profile');
+    let userName = 'You';
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      userName = profile.name || 'You';
+    }
+
+    // First, try to find user by name
+    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
+    if (findResponse.ok) {
+      const user = await findResponse.json();
+      localStorage.setItem('userId', user.id);
+      return user.id;
+    } else {
+      // Create new user
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: userName }),
+      });
+      if (createResponse.ok) {
+        const user = await createResponse.json();
+        localStorage.setItem('userId', user.id);
+        return user.id;
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -88,20 +118,54 @@ export default function Home() {
         return () => clearTimeout(timer);
       }
 
-      const savedWorkouts = localStorage.getItem('workouts');
-      if (savedWorkouts) {
-        setWorkouts(JSON.parse(savedWorkouts));
-      }
+      // Fetch workouts and meals from API
+      const userId = await getUserId();
+      if (userId) {
+        try {
+          const [workoutsResponse, mealsResponse] = await Promise.all([
+            fetch(`/api/workouts?userId=${userId}`),
+            fetch(`/api/meals?userId=${userId}`)
+          ]);
 
-      const savedMeals = localStorage.getItem('meals');
-      if (savedMeals) {
-        setMeals(JSON.parse(savedMeals));
+          if (workoutsResponse.ok) {
+            const workoutsData = await workoutsResponse.json();
+            setWorkouts(workoutsData);
+          }
+
+          if (mealsResponse.ok) {
+            const mealsData = await mealsResponse.json();
+            setMeals(mealsData);
+          }
+        } catch (error) {
+          console.error('Failed to fetch data from API:', error);
+          // Fallback to localStorage
+          const savedWorkouts = localStorage.getItem('workouts');
+          if (savedWorkouts) {
+            setWorkouts(JSON.parse(savedWorkouts));
+          }
+
+          const savedMeals = localStorage.getItem('meals');
+          if (savedMeals) {
+            setMeals(JSON.parse(savedMeals));
+          }
+        }
+      } else {
+        // Fallback to localStorage if no user ID
+        const savedWorkouts = localStorage.getItem('workouts');
+        if (savedWorkouts) {
+          setWorkouts(JSON.parse(savedWorkouts));
+        }
+
+        const savedMeals = localStorage.getItem('meals');
+        if (savedMeals) {
+          setMeals(JSON.parse(savedMeals));
+        }
       }
 
       setIsLoading(false);
 
       // Check for achievements after loading data
-      const data = { workouts, meals, profile: savedProfile ? JSON.parse(savedProfile) : null };
+      const data = { workouts: workouts || [], meals: meals || [], profile: savedProfile ? JSON.parse(savedProfile) : null };
       triggerAchievementCheck(data);
     };
 
@@ -231,7 +295,7 @@ export default function Home() {
               Track your workouts, monitor your diet, and visualize your progress.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {/* Workouts */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-2">Log Workouts</h3>
@@ -250,20 +314,20 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Progress */}
+            {/* Progress
             <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-2">View Progress</h3>
               <p className="text-gray-300">See charts and graphs of your fitness journey.</p>
               <Link href="/progress" className="mt-4 inline-block text-green-400 hover:text-green-300">
                 Get Started →
               </Link>
-            </div>
+            </div> */}
 
             {/* Profile */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-2">Manage Profile</h3>
-              <p className="text-gray-300">Set goals and update your personal information.</p>
-              <Link href="/profile" className="mt-4 inline-block text-green-400 hover:text-green-300">
+              <h3 className="text-lg font-semibold text-white mb-2">Recommendations</h3>
+              <p className="text-gray-300">Receive personalised AI fitness and diet recommendations</p>
+              <Link href="/recommendations" className="mt-4 inline-block text-green-400 hover:text-green-300">
                 Get Started →
               </Link>
             </div>

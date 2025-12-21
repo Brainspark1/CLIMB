@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AchievementPopup from './AchievementPopup';
 import { ACHIEVEMENTS, checkAchievements, saveAchievements, AchievementData } from '../utils/achievements';
 
@@ -27,10 +27,43 @@ export default function AchievementProvider({ children }: AchievementProviderPro
   const [currentAchievement, setCurrentAchievement] = useState<{ id: string; title: string; description: string; icon: string } | null>(null);
   const [pendingAchievements, setPendingAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
 
-  const triggerAchievementCheck = (data: AchievementData) => {
-    const newAchievements = checkAchievements(data);
+  useEffect(() => {
+    if (showPopup) {
+      const timer = setTimeout(() => {
+        setShowPopup(false);
+        setCurrentAchievement(null);
+        showNextAchievement();
+      }, 3000); // Auto-close after 3 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [showPopup]);
+
+  const triggerAchievementCheck = async (data: AchievementData) => {
+    const newAchievements = await checkAchievements(data);
     if (newAchievements.length > 0) {
-      saveAchievements(newAchievements);
+      // Save to database
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        try {
+          for (const achievement of newAchievements) {
+            await fetch('/api/achievements', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId,
+                achievementId: achievement.id,
+              }),
+            });
+          }
+        } catch (error) {
+          console.error('Failed to save achievements to database:', error);
+        }
+      } else {
+        // Fallback to localStorage
+        saveAchievements(newAchievements);
+      }
+
       setPendingAchievements(newAchievements);
       showNextAchievement();
     }

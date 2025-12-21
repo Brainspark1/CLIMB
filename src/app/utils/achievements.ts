@@ -121,9 +121,29 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
 ];
 
-export function checkAchievements(data: AchievementData): EarnedAchievement[] {
+export async function checkAchievements(data: AchievementData): Promise<EarnedAchievement[]> {
   const earnedAchievements: EarnedAchievement[] = [];
-  const savedAchievements = JSON.parse(localStorage.getItem('achievements') || '[]');
+
+  // Check database for already earned achievements
+  const userId = localStorage.getItem('userId');
+  let savedAchievements: EarnedAchievement[] = [];
+
+  if (userId) {
+    try {
+      const response = await fetch(`/api/achievements?userId=${userId}`);
+      if (response.ok) {
+        const dbAchievements = await response.json();
+        savedAchievements = dbAchievements.map((a: { achievementId: string; earnedDate: string }) => ({ id: a.achievementId, earnedDate: a.earnedDate }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch achievements from database:', error);
+      // Fallback to localStorage
+      savedAchievements = JSON.parse(localStorage.getItem('achievements') || '[]');
+    }
+  } else {
+    // Fallback to localStorage
+    savedAchievements = JSON.parse(localStorage.getItem('achievements') || '[]');
+  }
 
   ACHIEVEMENTS.forEach(achievement => {
     const alreadyEarned = savedAchievements.find((a: EarnedAchievement) => a.id === achievement.id);

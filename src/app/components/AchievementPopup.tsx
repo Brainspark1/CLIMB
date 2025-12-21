@@ -8,19 +8,19 @@ interface AchievementPopupProps {
 export default function AchievementPopup({ title, description, icon, onClose }: AchievementPopupProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-8 rounded-lg border border-yellow-500/50 max-w-md mx-4 text-center">
-        <div className="text-6xl mb-4 text-yellow-400">
-          {icon}
+      <div className="bg-gray-800 border border-green-500 rounded-lg p-6 max-w-sm mx-4 shadow-lg">
+        <div className="text-center">
+          <div className="text-6xl mb-4">{icon}</div>
+          <h3 className="text-xl font-bold text-white mb-2">Achievement Unlocked!</h3>
+          <h4 className="text-lg font-semibold text-green-400 mb-2">{title}</h4>
+          <p className="text-gray-300 mb-4">{description}</p>
+          <button
+            onClick={onClose}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Awesome!
+          </button>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Achievement Unlocked!</h2>
-        <h3 className="text-xl font-semibold text-yellow-400 mb-2">{title}</h3>
-        <p className="text-gray-300 mb-6">{description}</p>
-        <button
-          onClick={onClose}
-          className="bg-yellow-600 text-white px-6 py-2 rounded-md hover:bg-yellow-700 transition-colors"
-        >
-          Awesome!
-        </button>
       </div>
     </div>
   );
