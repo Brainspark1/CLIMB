@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+// import { usePathname } from "next/navigation";
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -64,9 +64,9 @@ export default function Home() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
-  const [popupDismissed, setPopupDismissed] = useState(false);
+  // const [popupDismissed, setPopupDismissed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const pathname = usePathname(); // 👈 Get current path
+  // const pathname = usePathname(); // 👈 Get current path
   const { triggerAchievementCheck } = useAchievements();
 
   const getUserId = async (): Promise<string | null> => {
@@ -163,20 +163,25 @@ export default function Home() {
       }
 
       setIsLoading(false);
-
-      // Check for achievements after loading data
-      const data = { workouts: workouts || [], meals: meals || [], profile: savedProfile ? JSON.parse(savedProfile) : null };
-      triggerAchievementCheck(data);
     };
 
     loadData();
   }, [triggerAchievementCheck]);
 
-  // 👇 Helper to style links dynamically
-  const linkClass = (path: string) =>
-    `text-green-400 hover:text-green-300 ${
-      pathname === path ? "font-bold text-green-300" : ""
-    }`;
+  // Separate effect for achievement checking after data loads
+  useEffect(() => {
+    if (workouts.length > 0 || meals.length > 0) {
+      const savedProfile = localStorage.getItem("profile");
+      const data = { workouts, meals, profile: savedProfile ? JSON.parse(savedProfile) : null };
+      triggerAchievementCheck(data);
+    }
+  }, [workouts, meals, triggerAchievementCheck]);
+
+  // // 👇 Helper to style links dynamically
+  // const linkClass = (path: string) =>
+  //   `text-green-400 hover:text-green-300 ${
+  //     pathname === path ? "font-bold text-green-300" : ""
+  //   }`;
 
   // Calculate workout progress for charts
   const workoutProgress = workouts.reduce((acc, workout) => {

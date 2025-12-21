@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       orderBy: { earnedDate: 'desc' },
     });
     return NextResponse.json(achievements);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch achievements' }, { status: 500 });
   }
 }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Achievement already exists' });
     }
 
-    const achievement = await prisma.achievement.create({
+    await prisma.achievement.create({
       data: {
         userId,
         achievementId,
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ message: 'Achievement created' });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create achievement' }, { status: 500 });
   }
 }
@@ -70,7 +70,7 @@ export async function DELETE(request: NextRequest) {
       where: { userId },
     });
     return NextResponse.json({ message: 'Achievements cleared successfully' });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to clear achievements' }, { status: 500 });
   }
 }

@@ -22,6 +22,7 @@ export default function Diet() {
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -98,7 +99,7 @@ export default function Diet() {
           protein: parseInt(protein),
           carbs: parseInt(carbs),
           fat: parseInt(fat),
-          date: new Date().toISOString().split('T')[0],
+          date,
         }),
       });
 
@@ -119,6 +120,7 @@ export default function Diet() {
         setProtein('');
         setCarbs('');
         setFat('');
+        setDate(new Date().toISOString().split('T')[0]);
       }
     } catch (error) {
       console.error('Failed to add meal:', error);
@@ -195,7 +197,7 @@ export default function Diet() {
         </div>
 
         <form onSubmit={addMeal} className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
             <input
               type="text"
               placeholder="Meal Name"
@@ -233,6 +235,13 @@ export default function Diet() {
               placeholder="Fat (g)"
               value={fat}
               onChange={(e) => setFat(e.target.value)}
+              className="border border-gray-600 rounded-md px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-700 text-white"
+              required
+            />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               className="border border-gray-600 rounded-md px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-700 text-white"
               required
             />

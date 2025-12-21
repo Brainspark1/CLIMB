@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import AchievementPopup from './AchievementPopup';
 import { ACHIEVEMENTS, checkAchievements, saveAchievements, AchievementData } from '../utils/achievements';
 
@@ -27,6 +27,19 @@ export default function AchievementProvider({ children }: AchievementProviderPro
   const [currentAchievement, setCurrentAchievement] = useState<{ id: string; title: string; description: string; icon: string } | null>(null);
   const [pendingAchievements, setPendingAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
 
+  const showNextAchievement = useCallback(
+    () => {
+      if (pendingAchievements.length > 0) {
+        const achievement = ACHIEVEMENTS.find(a => a.id === pendingAchievements[0].id);
+        if (achievement) {
+          setCurrentAchievement(achievement);
+          setShowPopup(true);
+        }
+      }
+    },
+    [pendingAchievements]
+  );
+
   useEffect(() => {
     if (showPopup) {
       const timer = setTimeout(() => {
@@ -37,7 +50,7 @@ export default function AchievementProvider({ children }: AchievementProviderPro
 
       return () => clearTimeout(timer);
     }
-  }, [showPopup]);
+  }, [showPopup, showNextAchievement]);
 
   const triggerAchievementCheck = async (data: AchievementData) => {
     const newAchievements = await checkAchievements(data);
@@ -66,16 +79,6 @@ export default function AchievementProvider({ children }: AchievementProviderPro
 
       setPendingAchievements(newAchievements);
       showNextAchievement();
-    }
-  };
-
-  const showNextAchievement = () => {
-    if (pendingAchievements.length > 0) {
-      const achievement = ACHIEVEMENTS.find(a => a.id === pendingAchievements[0].id);
-      if (achievement) {
-        setCurrentAchievement(achievement);
-        setShowPopup(true);
-      }
     }
   };
 

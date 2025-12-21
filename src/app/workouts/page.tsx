@@ -20,6 +20,7 @@ export default function Workouts() {
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
   const [weight, setWeight] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export default function Workouts() {
           sets: parseInt(sets),
           reps: parseInt(reps),
           weight: parseFloat(weight),
-          date: new Date().toISOString().split('T')[0],
+          date,
         }),
       });
 
@@ -168,7 +169,7 @@ export default function Workouts() {
               onSubmit={addWorkout}
               className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 mb-8"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <input
                   type="text"
                   placeholder="Exercise"
@@ -199,6 +200,13 @@ export default function Workouts() {
                   placeholder="Weight (lbs)"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
+                  className="border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white"
+                  required
+                />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   className="border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white"
                   required
                 />

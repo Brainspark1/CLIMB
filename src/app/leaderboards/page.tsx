@@ -13,16 +13,12 @@ interface UserStats {
   streak: number;
 }
 
-interface Workout {
-  weight: number;
-  sets: number;
-  reps: number;
-  date: string;
-}
-
-interface Meal {
-  calories: number;
-}
+// interface Workout {
+//   weight: number;
+//   sets: number;
+//   reps: number;
+//   date: string;
+// }
 
 export default function Leaderboards() {
   const [leaderboards, setLeaderboards] = useState<UserStats[]>([]);
@@ -112,34 +108,34 @@ export default function Leaderboards() {
     loadData();
   }, []);
 
-  const getCurrentUserId = async (): Promise<string | null> => {
-    return await getUserId();
-  };
+  // const getCurrentUserId = async (): Promise<string | null> => {
+  //   return await getUserId();
+  // };
 
-  const calculateStreak = (workouts: Workout[]) => {
-    // Simple streak calculation - consecutive days with workouts
-    if (workouts.length === 0) return 0;
+  // const calculateStreak = (workouts: Workout[]) => {
+  //   // Simple streak calculation - consecutive days with workouts
+  //   if (workouts.length === 0) return 0;
 
-    const dates = workouts.map(w => w.date).sort();
-    let streak = 1;
-    let currentStreak = 1;
+  //   const dates = workouts.map(w => w.date).sort();
+  //   let streak = 1;
+  //   let currentStreak = 1;
 
-    for (let i = 1; i < dates.length; i++) {
-      const prevDate = new Date(dates[i - 1]);
-      const currDate = new Date(dates[i]);
-      const diffTime = currDate.getTime() - prevDate.getTime();
-      const diffDays = diffTime / (1000 * 3600 * 24);
+  //   for (let i = 1; i < dates.length; i++) {
+  //     const prevDate = new Date(dates[i - 1]);
+  //     const currDate = new Date(dates[i]);
+  //     const diffTime = currDate.getTime() - prevDate.getTime();
+  //     const diffDays = diffTime / (1000 * 3600 * 24);
 
-      if (diffDays === 1) {
-        currentStreak++;
-        streak = Math.max(streak, currentStreak);
-      } else {
-        currentStreak = 1;
-      }
-    }
+  //     if (diffDays === 1) {
+  //       currentStreak++;
+  //       streak = Math.max(streak, currentStreak);
+  //     } else {
+  //       currentStreak = 1;
+  //     }
+  //   }
 
-    return streak;
-  };
+  //   return streak;
+  // };
 
   const getRankIcon = (index: number) => {
     switch (index) {
@@ -166,30 +162,62 @@ export default function Leaderboards() {
           <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
             <h3 className="text-xl font-semibold text-white mb-4">🏆 Overall Leaderboard</h3>
             <div className="space-y-3">
-              {[...leaderboards]
-                .sort((a, b) => b.totalWeight - a.totalWeight)
-                .map((user, index) => (
-                <div
-                  key={user.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-white font-bold">{getRankIcon(index)}</span>
-                    <div>
-                      <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
-                        {user.name}
-                      </p>
-                      <p className="text-sm text-gray-300">{user.totalWorkouts} workouts</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-white">{user.totalWeight.toFixed(0)} lbs</p>
-                    <p className="text-xs text-gray-300">total lifted</p>
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                const sortedUsers = [...leaderboards].sort((a, b) => b.totalWeight - a.totalWeight);
+                const currentUserIndex = sortedUsers.findIndex(user => user.name.includes('(You)'));
+                const top5 = sortedUsers.slice(0, 5);
+                const showCurrentUser = currentUserIndex >= 5;
+
+                return (
+                  <>
+                    {top5.map((user, index) => (
+                      <div
+                        key={user.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <span className="text-white font-bold">{getRankIcon(index)}</span>
+                          <div>
+                            <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
+                              {user.name}
+                            </p>
+                            <p className="text-sm text-gray-300">{user.totalWorkouts} workouts</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-white">{user.totalWeight.toFixed(0)} lbs</p>
+                          <p className="text-xs text-gray-300">total lifted</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {showCurrentUser && (
+                      <>
+                        <div className="flex justify-center py-2">
+                          <span className="text-gray-500 text-xl">⋯</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-green-900 border-2 border-green-500">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-white font-bold">#{currentUserIndex + 1}</span>
+                            <div>
+                              <p className="font-medium text-green-300">
+                                {sortedUsers[currentUserIndex].name}
+                              </p>
+                              <p className="text-sm text-gray-300">{sortedUsers[currentUserIndex].totalWorkouts} workouts</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">{sortedUsers[currentUserIndex].totalWeight.toFixed(0)} lbs</p>
+                            <p className="text-xs text-gray-300">total lifted</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -197,30 +225,62 @@ export default function Leaderboards() {
           <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
             <h3 className="text-xl font-semibold text-white mb-4">🔥 Streak Leaderboard</h3>
             <div className="space-y-3">
-              {[...leaderboards]
-                .sort((a, b) => b.streak - a.streak)
-                .map((user, index) => (
-                <div
-                  key={user.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-white font-bold">{getRankIcon(index)}</span>
-                    <div>
-                      <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
-                        {user.name}
-                      </p>
-                      <p className="text-sm text-gray-300">{user.streak} day streak</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-white">{user.totalWorkouts}</p>
-                    <p className="text-xs text-gray-300">workouts</p>
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                const sortedUsers = [...leaderboards].sort((a, b) => b.streak - a.streak);
+                const currentUserIndex = sortedUsers.findIndex(user => user.name.includes('(You)'));
+                const top5 = sortedUsers.slice(0, 5);
+                const showCurrentUser = currentUserIndex >= 5;
+
+                return (
+                  <>
+                    {top5.map((user, index) => (
+                      <div
+                        key={user.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <span className="text-white font-bold">{getRankIcon(index)}</span>
+                          <div>
+                            <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
+                              {user.name}
+                            </p>
+                            <p className="text-sm text-gray-300">{user.streak} day streak</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-white">{user.totalWorkouts}</p>
+                          <p className="text-xs text-gray-300">workouts</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {showCurrentUser && (
+                      <>
+                        <div className="flex justify-center py-2">
+                          <span className="text-gray-500 text-xl">⋯</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-green-900 border-2 border-green-500">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-white font-bold">#{currentUserIndex + 1}</span>
+                            <div>
+                              <p className="font-medium text-green-300">
+                                {sortedUsers[currentUserIndex].name}
+                              </p>
+                              <p className="text-sm text-gray-300">{sortedUsers[currentUserIndex].streak} day streak</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">{sortedUsers[currentUserIndex].totalWorkouts}</p>
+                            <p className="text-xs text-gray-300">workouts</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -228,30 +288,62 @@ export default function Leaderboards() {
           <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
             <h3 className="text-xl font-semibold text-white mb-4">🥗 Nutrition Leaderboard</h3>
             <div className="space-y-3">
-              {[...leaderboards]
-                .sort((a, b) => b.totalCalories - a.totalCalories)
-                .map((user, index) => (
-                <div
-                  key={user.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-white font-bold">{getRankIcon(index)}</span>
-                    <div>
-                      <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
-                        {user.name}
-                      </p>
-                      <p className="text-sm text-gray-300">{user.totalCalories} calories tracked</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-white">{user.totalWorkouts}</p>
-                    <p className="text-xs text-gray-300">meals logged</p>
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                const sortedUsers = [...leaderboards].sort((a, b) => b.totalCalories - a.totalCalories);
+                const currentUserIndex = sortedUsers.findIndex(user => user.name.includes('(You)'));
+                const top5 = sortedUsers.slice(0, 5);
+                const showCurrentUser = currentUserIndex >= 5;
+
+                return (
+                  <>
+                    {top5.map((user, index) => (
+                      <div
+                        key={user.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          user.name.includes('(You)') ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <span className="text-white font-bold">{getRankIcon(index)}</span>
+                          <div>
+                            <p className={`font-medium ${user.name.includes('(You)') ? 'text-green-300' : 'text-white'}`}>
+                              {user.name}
+                            </p>
+                            <p className="text-sm text-gray-300">{user.totalCalories} calories tracked</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-white">{user.totalWorkouts}</p>
+                          <p className="text-xs text-gray-300">meals logged</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {showCurrentUser && (
+                      <>
+                        <div className="flex justify-center py-2">
+                          <span className="text-gray-500 text-xl">⋯</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-green-900 border-2 border-green-500">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-white font-bold">#{currentUserIndex + 1}</span>
+                            <div>
+                              <p className="font-medium text-green-300">
+                                {sortedUsers[currentUserIndex].name}
+                              </p>
+                              <p className="text-sm text-gray-300">{sortedUsers[currentUserIndex].totalCalories} calories tracked</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">{sortedUsers[currentUserIndex].totalWorkouts}</p>
+                            <p className="text-xs text-gray-300">meals logged</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 

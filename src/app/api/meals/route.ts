@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'desc' },
     });
     return NextResponse.json(meals);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch meals' }, { status: 500 });
   }
 }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(meal, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create meal' }, { status: 500 });
   }
 }
@@ -64,7 +64,7 @@ export async function DELETE(request: NextRequest) {
         where: { id },
       });
       return NextResponse.json({ message: 'Meal deleted' });
-    } catch (error) {
+    } catch {
       return NextResponse.json({ error: 'Failed to delete meal' }, { status: 500 });
     }
   } else if (userId) {
@@ -74,7 +74,7 @@ export async function DELETE(request: NextRequest) {
         where: { userId },
       });
       return NextResponse.json({ message: 'Meals cleared successfully' });
-    } catch (error) {
+    } catch {
       return NextResponse.json({ error: 'Failed to clear meals' }, { status: 500 });
     }
   } else {

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     } else {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-  } catch (error) {
+    } catch {
     return NextResponse.json({ error: 'Failed to find user' }, { status: 500 });
   }
 }
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(user, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }
@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
 
     return NextResponse.json(user);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }

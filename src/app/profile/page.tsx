@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 // import { Head } from 'next/document';
 import Header from '../components/Header';
 import AchievementBadge from '../components/AchievementBadge';
-import AchievementPopup from '../components/AchievementPopup';
-import AchievementProvider, { useAchievements } from '../components/AchievementProvider';
-import { ACHIEVEMENTS, getEarnedAchievements, checkAchievements, saveAchievements, AchievementData } from '../utils/achievements';
+// import AchievementPopup from '../components/AchievementPopup';
+import { useAchievements } from '../components/AchievementProvider';
+import { ACHIEVEMENTS, getEarnedAchievements, 
+  // checkAchievements, saveAchievements, AchievementData 
+} from '../utils/achievements';
  
 interface Profile {
   name: string;
@@ -28,7 +30,7 @@ export default function Profile() {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [earnedAchievements, setEarnedAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
-  const [isLoadingAchievements, setIsLoadingAchievements] = useState(true);
+  const [, setIsLoadingAchievements] = useState(true);
   const { triggerAchievementCheck } = useAchievements();
 
   const getUserId = async (): Promise<string | null> => {
@@ -75,7 +77,7 @@ export default function Profile() {
           const response = await fetch(`/api/achievements?userId=${userId}`);
           if (response.ok) {
             const achievements = await response.json();
-            setEarnedAchievements(achievements.map((a: any) => ({ id: a.achievementId, earnedDate: a.earnedDate })));
+            setEarnedAchievements(achievements.map((a: { achievementId: string; earnedDate: string }) => ({ id: a.achievementId, earnedDate: a.earnedDate })));
           }
         } catch (error) {
           console.error('Failed to load achievements:', error);
@@ -332,23 +334,48 @@ export default function Profile() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <button
-              onClick={() => {
-                const data = {
-                  profile: localStorage.getItem('profile'),
-                  workouts: localStorage.getItem('workouts'),
-                  meals: localStorage.getItem('meals'),
-                  exportDate: new Date().toISOString(),
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `fitness-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                alert('Data exported successfully!');
+              onClick={async () => {
+                try {
+                  const userId = await getUserId();
+                  if (!userId) {
+                    alert('Unable to export data. Please ensure you are logged in.');
+                    return;
+                  }
+
+                  // Fetch all data from database
+                  const [workoutsRes, mealsRes, achievementsRes] = await Promise.all([
+                    fetch(`/api/workouts?userId=${userId}`),
+                    fetch(`/api/meals?userId=${userId}`),
+                    fetch(`/api/achievements?userId=${userId}`)
+                  ]);
+
+                  const workouts = workoutsRes.ok ? await workoutsRes.json() : [];
+                  const meals = mealsRes.ok ? await mealsRes.json() : [];
+                  const achievements = achievementsRes.ok ? await achievementsRes.json() : [];
+
+                  const data = {
+                    profile: localStorage.getItem('profile'), // Profile still stored locally
+                    workouts,
+                    meals,
+                    achievements,
+                    exportDate: new Date().toISOString(),
+                    userId,
+                  };
+
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `fitness-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  alert('Data exported successfully!');
+                } catch (error) {
+                  console.error('Export failed:', error);
+                  alert('Failed to export data. Please try again.');
+                }
               }}
               className="bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 transition-colors font-medium"
             >
@@ -361,19 +388,85 @@ export default function Profile() {
                 id="import-file"
                 type="file"
                 accept=".json"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
                     const reader = new FileReader();
-                    reader.onload = (event) => {
+                    reader.onload = async (event) => {
                       try {
                         const data = JSON.parse(event.target?.result as string);
+
                         if (confirm('This will overwrite your current data. Are you sure you want to proceed?')) {
-                          if (data.profile) localStorage.setItem('profile', data.profile);
-                          if (data.workouts) localStorage.setItem('workouts', data.workouts);
-                          if (data.meals) localStorage.setItem('meals', data.meals);
-                          alert('Data imported successfully! Please refresh the page to see changes.');
-                          window.location.reload();
+                          const userId = await getUserId();
+                          if (!userId) {
+                            alert('Unable to import data. Please ensure you are logged in.');
+                            return;
+                          }
+
+                          try {
+                            // Import profile (still stored locally)
+                            if (data.profile) {
+                              localStorage.setItem('profile', data.profile);
+                            }
+
+                            // Import workouts to database
+                            if (data.workouts && Array.isArray(data.workouts)) {
+                              for (const workout of data.workouts) {
+                                await fetch('/api/workouts', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    userId,
+                                    exercise: workout.exercise,
+                                    sets: workout.sets,
+                                    reps: workout.reps,
+                                    weight: workout.weight,
+                                    date: workout.date,
+                                  }),
+                                });
+                              }
+                            }
+
+                            // Import meals to database
+                            if (data.meals && Array.isArray(data.meals)) {
+                              for (const meal of data.meals) {
+                                await fetch('/api/meals', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    userId,
+                                    name: meal.name,
+                                    calories: meal.calories,
+                                    protein: meal.protein,
+                                    carbs: meal.carbs,
+                                    fat: meal.fat,
+                                    date: meal.date,
+                                  }),
+                                });
+                              }
+                            }
+
+                            // Import achievements to database
+                            if (data.achievements && Array.isArray(data.achievements)) {
+                              for (const achievement of data.achievements) {
+                                await fetch('/api/achievements', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    userId,
+                                    achievementId: achievement.achievementId || achievement.id,
+                                    earnedDate: achievement.earnedDate,
+                                  }),
+                                });
+                              }
+                            }
+
+                            alert('Data imported successfully! Please refresh the page to see changes.');
+                            window.location.reload();
+                          } catch (error) {
+                            console.error('Import failed:', error);
+                            alert('Failed to import data. Please try again.');
+                          }
                         }
                       } catch {
                         alert('Invalid file format. Please select a valid backup file.');
@@ -411,7 +504,7 @@ export default function Profile() {
                       } else {
                         alert('Failed to clear workout history.');
                       }
-                    } catch (error) {
+                    } catch {
                       alert('Failed to clear workout history.');
                     }
                   } else {
@@ -441,7 +534,7 @@ export default function Profile() {
                       } else {
                         alert('Failed to clear diet history.');
                       }
-                    } catch (error) {
+                    } catch {
                       alert('Failed to clear diet history.');
                     }
                   } else {
@@ -470,7 +563,7 @@ export default function Profile() {
                       ]);
                       alert('Profile and all data cleared successfully.');
                       window.location.reload();
-                    } catch (error) {
+                    } catch {
                       alert('Failed to clear profile data.');
                     }
                   } else {
