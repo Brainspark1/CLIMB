@@ -114,15 +114,15 @@ export default function Header() {
 
   return (
     <header className="bg-gray-800 shadow-sm border-b border-gray-700">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center h-[90px]">
+      <div className="max-w-7xl mx-auto px-3">
+        <div className="flex justify-between items-center h-[120px]">
           <Link href="/">
             <Image
-              src="/logo.png"
+              src="/climbLogo.png"
               alt="Fitness Tracker Logo"
               width={220}
               height={220}
-              className="h-[220px] w-auto object-contain"
+              className="h-[240px] w-auto object-contain"
               draggable={false}
             />
           </Link>

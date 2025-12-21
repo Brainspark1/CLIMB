@@ -46,23 +46,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/users/:id
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const body = await request.json();
-    const { name } = body;
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name required' }, { status: 400 });
-    }
-
-    const user = await prisma.user.update({
-      where: { id: params.id },
-      data: { name },
-    });
-
-    return NextResponse.json(user);
-  } catch {
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
-  }
-}
