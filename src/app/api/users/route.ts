@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { getPrismaClient } from '../../../lib/prisma';
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // GET /api/users?name=...
 export async function GET(request: NextRequest) {
@@ -45,5 +45,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }
-
-
