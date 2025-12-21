@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPrismaClient } from '../../../../lib/prisma';
-
-const prisma = getPrismaClient();
+import { prisma } from '../../../../lib/prisma';
 
 // PUT /api/users/[id]
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

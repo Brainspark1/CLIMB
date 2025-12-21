@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPrismaClient } from '../../../lib/prisma';
-
-const prisma = getPrismaClient();
+import { prisma } from '../../../lib/prisma';
 
 // GET /api/achievements?userId=...
 export async function GET(request: NextRequest) {
