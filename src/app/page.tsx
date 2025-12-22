@@ -110,12 +110,6 @@ export default function Home() {
 
       if (savedProfile) {
         setProfile(JSON.parse(savedProfile));
-      } else if (!dismissed) {
-        // Show popup 2.5 seconds after visiting if no profile is set and not dismissed
-        const timer = setTimeout(() => {
-          setShowProfilePopup(true);
-        }, 2500);
-        return () => clearTimeout(timer);
       }
 
       // Fetch workouts and meals from API
@@ -163,6 +157,13 @@ export default function Home() {
       }
 
       setIsLoading(false);
+
+      // Show popup after loading if no profile is set and not dismissed
+      if (!savedProfile && !dismissed) {
+        setTimeout(() => {
+          setShowProfilePopup(true);
+        }, 500); // Reduced delay since loading is already complete
+      }
     };
 
     loadData();
