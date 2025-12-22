@@ -207,7 +207,7 @@ export default function Workouts() {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white"
+                  className="white-calendar-icon border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white"
                   required
                 />
                 <button

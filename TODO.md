@@ -1,9 +1,7 @@
-# Resolve Build Errors
+# TODO: Fix Calendar Icons and BMI Display
 
-## Steps to Complete
-
-- [x] Fix eslint version in package.json to ^9.0.0
-- [x] Keep schema.prisma as PostgreSQL for Neon
-- [ ] Run npm install --legacy-peer-deps
-- [ ] Run npx prisma generate
-- [ ] Run npm run build
+## Tasks
+- [ ] Add CSS class to globals.css for white calendar icon
+- [ ] Update date input in workouts/page.tsx to use white calendar class
+- [ ] Update date input in diet/page.tsx to use white calendar class
+- [ ] Update BMI category condition in profile/page.tsx to hide when N/A

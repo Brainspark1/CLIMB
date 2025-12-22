@@ -282,7 +282,7 @@ export default function Profile() {
               <div>
                 <p className="text-sm font-medium text-gray-300">BMI</p>
                 <p className="text-2xl font-bold text-green-400">{calculateBMI()}</p>
-                {profile.height && profile.weight && (
+                {calculateBMI() !== 'N/A' && (
                   <p className={`text-sm ${getBMICategoryColor(getBMICategory(parseFloat(calculateBMI())))}`}>
                     Category: {getBMICategory(parseFloat(calculateBMI()))}
                   </p>
