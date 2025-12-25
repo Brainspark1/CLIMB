@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../lib/prisma';
 
 // GET /api/meals?userId=...
 export async function GET(request: NextRequest) {
@@ -29,24 +27,39 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, name, calories, protein, carbs, fat, date } = body;
 
-    if (!userId || !name || !calories || !protein || !carbs || !fat || !date) {
+    if (!userId || !name || calories === undefined || protein === undefined || carbs === undefined || fat === undefined || !date) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const parsedCalories = parseInt(calories);
+    const parsedProtein = parseInt(protein);
+    const parsedCarbs = parseInt(carbs);
+    const parsedFat = parseInt(fat);
+
+    if (isNaN(parsedCalories) || isNaN(parsedProtein) || isNaN(parsedCarbs) || isNaN(parsedFat)) {
+      return NextResponse.json({ error: 'Invalid number values' }, { status: 400 });
+    }
+
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
     }
 
     const meal = await prisma.meal.create({
       data: {
         userId,
         name,
-        calories: parseInt(calories),
-        protein: parseInt(protein),
-        carbs: parseInt(carbs),
-        fat: parseInt(fat),
-        date,
+        calories: parsedCalories,
+        protein: parsedProtein,
+        carbs: parsedCarbs,
+        fat: parsedFat,
+        date: parsedDate,
       },
     });
 
     return NextResponse.json(meal, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error('Error creating meal:', error);
     return NextResponse.json({ error: 'Failed to create meal' }, { status: 500 });
   }
 }
