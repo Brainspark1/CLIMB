@@ -11,7 +11,7 @@ export async function GET() {
       },
     });
 
-    const leaderboards = users.map((user: { id: string; name: string; workouts: { date: string; weight: number; sets: number; reps: number; }[]; meals: { calories: number; }[]; }) => {
+    const leaderboards = users.map((user: { id: string; name: string | null; workouts: { date: Date; weight: number; sets: number; reps: number; }[]; meals: { calories: number; }[]; }) => {
       const totalWorkouts = user.workouts.length;
       const totalWeight = user.workouts.reduce(
         (sum, w) => sum + w.weight * w.sets * w.reps,
@@ -23,7 +23,7 @@ export async function GET() {
       );
 
       const workoutDates = user.workouts
-        .map(w => new Date(w.date))
+        .map(w => w.date)
         .sort((a, b) => a.getTime() - b.getTime());
 
       let streak = 0;
@@ -44,7 +44,7 @@ export async function GET() {
 
       return {
         id: user.id,
-        name: user.name,
+        name: user.name || 'Anonymous',
         totalWorkouts,
         totalWeight,
         totalCalories,
