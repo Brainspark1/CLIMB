@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../lib/prisma';
 
 // GET /api/workouts?userId=...
 export async function GET(request: NextRequest) {
@@ -27,21 +25,43 @@ export async function GET(request: NextRequest) {
 // POST /api/workouts
 export async function POST(request: NextRequest) {
   try {
-    const { userId, exercise, sets, reps, weight, date } = await request.json();
+    const body = await request.json();
+    const { userId, exercise, sets, reps, weight, date } = body;
+
+    if (!userId || !exercise || sets === undefined || reps === undefined || weight === undefined) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const parsedSets = parseInt(sets);
+    const parsedReps = parseInt(reps);
+    const parsedWeight = parseFloat(weight);
+
+    if (isNaN(parsedSets) || isNaN(parsedReps) || isNaN(parsedWeight)) {
+      return NextResponse.json({ error: 'Invalid number values' }, { status: 400 });
+    }
+
+    let parsedDate;
+    if (date) {
+      parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+      }
+    }
 
     const workout = await prisma.workout.create({
       data: {
         userId,
         exercise,
-        sets,
-        reps,
-        weight,
-        date,
+        sets: parsedSets,
+        reps: parsedReps,
+        weight: parsedWeight,
+        date: parsedDate,
       },
     });
 
     return NextResponse.json(workout);
-  } catch {
+  } catch (error) {
+    console.error('Error creating workout:', error);
     return NextResponse.json({ error: 'Failed to create workout' }, { status: 500 });
   }
 }

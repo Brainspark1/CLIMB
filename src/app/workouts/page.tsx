@@ -238,7 +238,7 @@ export default function Workouts() {
                       <td className="px-6 py-4 text-gray-300">{workout.sets}</td>
                       <td className="px-6 py-4 text-gray-300">{workout.reps}</td>
                       <td className="px-6 py-4 text-gray-300">{workout.weight} lbs</td>
-                      <td className="px-6 py-4 text-gray-300">{workout.date}</td>
+                      <td className="px-6 py-4 text-gray-300">{workout.date.split('T')[0]}</td>
                       <td className="px-6 py-4">
                         <button
                           onClick={() => deleteWorkout(workout.id)}

@@ -270,13 +270,13 @@ export default function Diet() {
             <tbody className="bg-gray-800 divide-y divide-gray-600">
               {filteredMeals.map((meal) => (
                 <tr key={meal.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{meal.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{meal.calories}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{meal.protein}g</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{meal.carbs}g</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{meal.fat}g</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{meal.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                  <td className="px-6 py-4 whitespace-nowrap text-white">{meal.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">{meal.calories}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">{meal.protein}g</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">{meal.carbs}g</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">{meal.fat}g</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">{meal.date.split('T')[0]}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">
                     <button
                       onClick={() => deleteMeal(meal.id)}
                       className="text-red-400 hover:text-red-300"

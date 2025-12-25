@@ -105,11 +105,11 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Work out for 7 consecutive days',
     icon: '👑',
     checkCondition: (data) => {
-      const workoutDates = [...new Set(data.workouts.map(w => w.date))].sort();
+      const workoutDates = [...new Set(data.workouts.map(w => w.date.split('T')[0]))].sort();
       if (workoutDates.length < 7) return false;
 
       // Check for 7 consecutive days
-      for (let i = workoutDates.length - 7; i < workoutDates.length; i++) {
+      for (let i = workoutDates.length - 7; i < workoutDates.length - 1; i++) {
         const current = new Date(workoutDates[i]);
         const next = new Date(workoutDates[i + 1]);
         const diffTime = Math.abs(next.getTime() - current.getTime());

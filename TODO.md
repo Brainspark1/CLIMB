@@ -1,7 +1,8 @@
-# TODO: Fix Calendar Icons and BMI Display
-
-## Tasks
-- [ ] Add CSS class to globals.css for white calendar icon
-- [ ] Update date input in workouts/page.tsx to use white calendar class
-- [ ] Update date input in diet/page.tsx to use white calendar class
-- [ ] Update BMI category condition in profile/page.tsx to hide when N/A
+- [x] Fix date parsing in /api/workouts POST
+- [x] Add validation and number parsing in /api/workouts POST
+- [x] Fix date parsing in /api/meals POST
+- [x] Test POST to /api/workouts with valid data
+- [x] Test POST to /api/meals with valid data
+- [x] Test edge cases: missing fields, invalid types, non-existent user
+- [x] Test DELETE endpoints
+- [x] Verify GET after POST to confirm persistence
