@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 
-// GET /api/users?name=...
+// GET /api/users?userId=...
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const name = searchParams.get('name');
+  const userId = searchParams.get('userId');
 
-  if (!name) {
-    return NextResponse.json({ error: 'Name required' }, { status: 400 });
+  if (!userId) {
+    return NextResponse.json({ error: 'UserId required' }, { status: 400 });
   }
 
   try {
-    const user = await prisma.user.findFirst({
-      where: { name },
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
     });
     if (user) {
       return NextResponse.json(user);
     } else {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    } catch {
+  } catch {
     return NextResponse.json({ error: 'Failed to find user' }, { status: 500 });
   }
 }
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name } = body;
+    const { userId, name } = body;
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name required' }, { status: 400 });
+    if (!userId || !name) {
+      return NextResponse.json({ error: 'UserId and name required' }, { status: 400 });
     }
 
     const user = await prisma.user.create({
-      data: { name },
+      data: { id: userId, name },
     });
 
     return NextResponse.json(user, { status: 201 });

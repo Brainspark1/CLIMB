@@ -26,32 +26,33 @@ export default function Leaderboards() {
   const [isLoading, setIsLoading] = useState(true);
 
   const getUserId = async (): Promise<string | null> => {
-    const savedProfile = localStorage.getItem('profile');
-    let userName = 'Anonymous User';
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      userName = profile.name || 'Anonymous User';
+    let userId = localStorage.getItem('userId');
+    if (userId) {
+      // Verify user exists in database
+      const findResponse = await fetch(`/api/users?userId=${encodeURIComponent(userId)}`);
+      if (findResponse.ok) {
+        return userId;
+      }
     }
 
-    // First, try to find user by name
-    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
-    if (findResponse.ok) {
-      const user = await findResponse.json();
-      localStorage.setItem('userId', user.id);
-      return user.id;
-    } else {
-      // Create new user
+    // Generate new unique user ID if not found or doesn't exist
+    userId = crypto.randomUUID();
+    localStorage.setItem('userId', userId);
+
+    const savedProfile = localStorage.getItem('profile');
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      // Create new user with the unique ID and name
       const createResponse = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: userName }),
+        body: JSON.stringify({ userId, name: profile.name || 'Anonymous User' }),
       });
       if (createResponse.ok) {
-        const user = await createResponse.json();
-        localStorage.setItem('userId', user.id);
-        return user.id;
+        return userId;
       }
     }
+
     return null;
   };
 
@@ -62,13 +63,14 @@ export default function Leaderboards() {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       try {
-        // Fetch real leaderboard data from API
+        // Get current user's ID first (creates user if needed)
+        const userId = await getUserId();
+
+        // Fetch real leaderboard data from API (now includes newly created user)
         const response = await fetch('/api/leaderboards');
         if (response.ok) {
           const allUsers = await response.json();
 
-          // Get current user's ID and stats
-          const userId = await getUserId();
           let currentUserStats = null;
           let updatedLeaderboards = allUsers;
 
@@ -91,7 +93,7 @@ export default function Leaderboards() {
             }
           }
 
-          setCurrentUser(currentUserStats); 
+          setCurrentUser(currentUserStats);
           setLeaderboards(updatedLeaderboards);
         } else {
           // Fallback to empty leaderboards if API fails

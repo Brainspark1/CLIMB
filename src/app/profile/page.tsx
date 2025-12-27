@@ -34,32 +34,33 @@ export default function Profile() {
   const { triggerAchievementCheck } = useAchievements();
 
   const getUserId = async (): Promise<string | null> => {
-    const savedProfile = localStorage.getItem('profile');
-    let userName = 'Anonymous User';
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      userName = profile.name || 'Anonymous User';
+    let userId = localStorage.getItem('userId');
+    if (userId) {
+      // Verify user exists in database
+      const findResponse = await fetch(`/api/users?userId=${encodeURIComponent(userId)}`);
+      if (findResponse.ok) {
+        return userId;
+      }
     }
 
-    // First, try to find user by name
-    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
-    if (findResponse.ok) {
-      const user = await findResponse.json();
-      localStorage.setItem('userId', user.id);
-      return user.id;
-    } else {
-      // Create new user
+    // Generate new unique user ID if not found or doesn't exist
+    userId = crypto.randomUUID();
+    localStorage.setItem('userId', userId);
+
+    const savedProfile = localStorage.getItem('profile');
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      // Create new user with the unique ID and name
       const createResponse = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: userName }),
+        body: JSON.stringify({ userId, name: profile.name || 'Anonymous User' }),
       });
       if (createResponse.ok) {
-        const user = await createResponse.json();
-        localStorage.setItem('userId', user.id);
-        return user.id;
+        return userId;
       }
     }
+
     return null;
   };
 
@@ -492,7 +493,7 @@ export default function Profile() {
             <button
               onClick={async () => {
                 if (confirm('Are you sure you want to clear all workout history? This action cannot be undone.')) {
-                  const userId = localStorage.getItem('userId');
+                  const userId = await getUserId();
                   if (userId) {
                     try {
                       const response = await fetch(`/api/workouts?userId=${userId}`, {
@@ -508,9 +509,7 @@ export default function Profile() {
                       alert('Failed to clear workout history.');
                     }
                   } else {
-                    // Fallback to localStorage if no userId
-                    localStorage.removeItem('workouts');
-                    alert('Workout history cleared successfully.');
+                    alert('Unable to clear workout history. Please ensure you are logged in.');
                   }
                 }
               }}
@@ -561,16 +560,20 @@ export default function Profile() {
                         fetch(`/api/meals?userId=${userId}`, { method: 'DELETE' }),
                         fetch(`/api/achievements?userId=${userId}`, { method: 'DELETE' }),
                       ]);
+                      // Also clear local profile data
+                      localStorage.removeItem('profile');
+                      localStorage.removeItem('userId');
+                      localStorage.removeItem('achievements');
+                      localStorage.removeItem('userStreak');
                       alert('Profile and all data cleared successfully.');
                       window.location.reload();
                     } catch {
                       alert('Failed to clear profile data.');
                     }
                   } else {
-                    // Fallback to localStorage if no userId
+                    // No userId found, just clear local data
                     localStorage.removeItem('profile');
-                    localStorage.removeItem('workouts');
-                    localStorage.removeItem('meals');
+                    localStorage.removeItem('achievements');
                     setProfile({
                       name: '',
                       age: 0,
