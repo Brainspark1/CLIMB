@@ -70,32 +70,33 @@ export default function Home() {
   const { triggerAchievementCheck } = useAchievements();
 
   const getUserId = async (): Promise<string | null> => {
-    const savedProfile = localStorage.getItem('profile');
-    let userName = 'You';
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      userName = profile.name || 'You';
+    let userId = localStorage.getItem('userId');
+    if (userId) {
+      // Verify user exists in database
+      const findResponse = await fetch(`/api/users?userId=${encodeURIComponent(userId)}`);
+      if (findResponse.ok) {
+        return userId;
+      }
     }
 
-    // First, try to find user by name
-    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
-    if (findResponse.ok) {
-      const user = await findResponse.json();
-      localStorage.setItem('userId', user.id);
-      return user.id;
-    } else {
-      // Create new user
+    // Generate new unique user ID if not found or doesn't exist
+    userId = crypto.randomUUID();
+    localStorage.setItem('userId', userId);
+
+    const savedProfile = localStorage.getItem('profile');
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      // Create new user with the unique ID and name
       const createResponse = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: userName }),
+        body: JSON.stringify({ userId, name: profile.name || 'You' }),
       });
       if (createResponse.ok) {
-        const user = await createResponse.json();
-        localStorage.setItem('userId', user.id);
-        return user.id;
+        return userId;
       }
     }
+
     return null;
   };
 
@@ -110,49 +111,38 @@ export default function Home() {
 
       if (savedProfile) {
         setProfile(JSON.parse(savedProfile));
-      }
 
-      // Fetch workouts and meals from API
-      const userId = await getUserId();
-      if (userId) {
-        try {
-          const [workoutsResponse, mealsResponse] = await Promise.all([
-            fetch(`/api/workouts?userId=${userId}`),
-            fetch(`/api/meals?userId=${userId}`)
-          ]);
+        // Fetch workouts and meals from API only if profile is set
+        const userId = await getUserId();
+        if (userId) {
+          try {
+            const [workoutsResponse, mealsResponse] = await Promise.all([
+              fetch(`/api/workouts?userId=${userId}`),
+              fetch(`/api/meals?userId=${userId}`)
+            ]);
 
-          if (workoutsResponse.ok) {
-            const workoutsData = await workoutsResponse.json();
-            setWorkouts(workoutsData);
+            if (workoutsResponse.ok) {
+              const workoutsData = await workoutsResponse.json();
+              setWorkouts(workoutsData);
+            }
+
+            if (mealsResponse.ok) {
+              const mealsData = await mealsResponse.json();
+              setMeals(mealsData);
+            }
+          } catch (error) {
+            console.error('Failed to fetch data from API:', error);
+            // Fallback to localStorage
+            const savedWorkouts = localStorage.getItem('workouts');
+            if (savedWorkouts) {
+              setWorkouts(JSON.parse(savedWorkouts));
+            }
+
+            const savedMeals = localStorage.getItem('meals');
+            if (savedMeals) {
+              setMeals(JSON.parse(savedMeals));
+            }
           }
-
-          if (mealsResponse.ok) {
-            const mealsData = await mealsResponse.json();
-            setMeals(mealsData);
-          }
-        } catch (error) {
-          console.error('Failed to fetch data from API:', error);
-          // Fallback to localStorage
-          const savedWorkouts = localStorage.getItem('workouts');
-          if (savedWorkouts) {
-            setWorkouts(JSON.parse(savedWorkouts));
-          }
-
-          const savedMeals = localStorage.getItem('meals');
-          if (savedMeals) {
-            setMeals(JSON.parse(savedMeals));
-          }
-        }
-      } else {
-        // Fallback to localStorage if no user ID
-        const savedWorkouts = localStorage.getItem('workouts');
-        if (savedWorkouts) {
-          setWorkouts(JSON.parse(savedWorkouts));
-        }
-
-        const savedMeals = localStorage.getItem('meals');
-        if (savedMeals) {
-          setMeals(JSON.parse(savedMeals));
         }
       }
 
@@ -186,7 +176,7 @@ export default function Home() {
 
   // Calculate workout progress for charts
   const workoutProgress = workouts.reduce((acc, workout) => {
-    const date = workout.date;
+    const date = workout.date.split('T')[0];
     if (!acc[date]) {
       acc[date] = { totalWeight: 0, exercises: new Set() };
     }
@@ -199,7 +189,7 @@ export default function Home() {
 
   // Calculate diet progress for charts
   const dietProgress = meals.reduce((acc, meal) => {
-    const date = meal.date;
+    const date = meal.date.split('T')[0];
     if (!acc[date]) {
       acc[date] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
     }
@@ -332,7 +322,7 @@ export default function Home() {
             {/* Profile */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-2">Recommendations</h3>
-              <p className="text-gray-300">Receive personalised AI fitness and diet recommendations</p>
+              <p className="text-gray-300">Receive personalised AI fitness and diet recommendations.</p>
               <Link href="/recommendations" className="mt-4 inline-block text-green-400 hover:text-green-300">
                 Get Started →
               </Link>

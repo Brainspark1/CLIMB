@@ -28,32 +28,33 @@ export default function Workouts() {
   const { triggerAchievementCheck } = useAchievements();
 
   const getUserId = async (): Promise<string | null> => {
-    const savedProfile = localStorage.getItem('profile');
-    let userName = 'Anonymous User';
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      userName = profile.name || 'Anonymous User';
+    let userId = localStorage.getItem('userId');
+    if (userId) {
+      // Verify user exists in database
+      const findResponse = await fetch(`/api/users?userId=${encodeURIComponent(userId)}`);
+      if (findResponse.ok) {
+        return userId;
+      }
     }
 
-    // First, try to find user by name
-    const findResponse = await fetch(`/api/users?name=${encodeURIComponent(userName)}`);
-    if (findResponse.ok) {
-      const user = await findResponse.json();
-      localStorage.setItem('userId', user.id);
-      return user.id;
-    } else {
-      // Create new user
+    // Generate new unique user ID if not found or doesn't exist
+    userId = crypto.randomUUID();
+    localStorage.setItem('userId', userId);
+
+    const savedProfile = localStorage.getItem('profile');
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      // Create new user with the unique ID and name
       const createResponse = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: userName }),
+        body: JSON.stringify({ userId, name: profile.name || 'Anonymous User' }),
       });
       if (createResponse.ok) {
-        const user = await createResponse.json();
-        localStorage.setItem('userId', user.id);
-        return user.id;
+        return userId;
       }
     }
+
     return null;
   };
 
