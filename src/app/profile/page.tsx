@@ -31,6 +31,7 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [earnedAchievements, setEarnedAchievements] = useState<{ id: string; earnedDate: string }[]>([]);
   const [, setIsLoadingAchievements] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const { triggerAchievementCheck } = useAchievements();
 
   const getUserId = async (): Promise<string | null> => {
@@ -73,6 +74,7 @@ export default function Profile() {
 
       // Load achievements from database
       const userId = await getUserId();
+      setUserId(userId);
       if (userId) {
         try {
           const response = await fetch(`/api/achievements?userId=${userId}`);
@@ -155,7 +157,25 @@ export default function Profile() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-white">Personal Information</h3>
               <button
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => {
+                  if (isEditing) {
+                    // Cancel: restore saved profile
+                    const savedProfile = localStorage.getItem('profile');
+                    if (savedProfile) {
+                      setProfile(JSON.parse(savedProfile));
+                    } else {
+                      setProfile({
+                        name: '',
+                        age: 0,
+                        height: 0,
+                        weight: 0,
+                        goal: '',
+                        sex: '',
+                      });
+                    }
+                  }
+                  setIsEditing(!isEditing);
+                }}
                 className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
               >
                 {isEditing ? 'Cancel' : 'Edit'}
@@ -178,8 +198,9 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-300">Age</label>
                   <input
                     type="number"
+                    min="0"
                     value={profile.age}
-                    onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) })}
+                    onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 0 })}
                     className="mt-1 block w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   />
@@ -188,8 +209,9 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-300">Height (cm)</label>
                   <input
                     type="number"
+                    min="0"
                     value={profile.height}
-                    onChange={(e) => setProfile({ ...profile, height: parseInt(e.target.value) })}
+                    onChange={(e) => setProfile({ ...profile, height: parseInt(e.target.value) || 0 })}
                     className="mt-1 block w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   />
@@ -198,8 +220,9 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-300">Weight (kg)</label>
                   <input
                     type="number"
+                    min="0"
                     value={profile.weight}
-                    onChange={(e) => setProfile({ ...profile, weight: parseInt(e.target.value) })}
+                    onChange={(e) => setProfile({ ...profile, weight: parseInt(e.target.value) || 0 })}
                     className="mt-1 block w-full border border-gray-600 rounded-md px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   />
@@ -480,6 +503,8 @@ export default function Profile() {
               />
             </div>
           </div>
+
+          <p className="text-sm text-gray-400 mt-4">User ID: {userId || 'Not available'}</p>
         </div>
 
         {/* Danger Zone */}

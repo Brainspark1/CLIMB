@@ -23,23 +23,33 @@ export async function GET() {
       );
 
       const workoutDates = user.workouts
-        .map(w => w.date)
+        .map(w => new Date(w.date))
         .sort((a, b) => a.getTime() - b.getTime());
 
       let streak = 0;
-      let currentStreak = 0;
+      if (workoutDates.length > 0) {
+        const lastDate = workoutDates[workoutDates.length - 1];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
 
-      for (let i = 0; i < workoutDates.length; i++) {
-        if (
-          i === 0 ||
-          (workoutDates[i].getTime() - workoutDates[i - 1].getTime()) ===
-            24 * 60 * 60 * 1000
-        ) {
-          currentStreak++;
-        } else {
-          currentStreak = 1;
+        const lastDateMidnight = new Date(lastDate);
+        lastDateMidnight.setHours(0, 0, 0, 0);
+
+        if (lastDateMidnight.getTime() === today.getTime() || lastDateMidnight.getTime() === yesterday.getTime()) {
+          streak = 1;
+          for (let i = workoutDates.length - 2; i >= 0; i--) {
+            const curr = workoutDates[i + 1];
+            const prev = workoutDates[i];
+            const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+            if (diffDays === 1) {
+              streak++;
+            } else {
+              break;
+            }
+          }
         }
-        streak = Math.max(streak, currentStreak);
       }
 
       return {

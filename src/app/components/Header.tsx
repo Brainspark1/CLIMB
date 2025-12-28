@@ -65,27 +65,34 @@ export default function Header() {
   const calculateStreak = (workouts: { date: string }[]) => {
     if (workouts.length === 0) return 0;
 
-    const workoutDates = workouts.map(w => w.date).sort();
-    let currentStreak = 1;
-    let maxStreak = 1;
+    const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a.getTime() - b.getTime());
 
-    for (let i = 1; i < workoutDates.length; i++) {
-      const prevDate = new Date(workoutDates[i - 1]);
-      const currDate = new Date(workoutDates[i]);
+    const lastDate = workoutDates[workoutDates.length - 1];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-      const diffDays =
-        (currDate.getTime() - prevDate.getTime()) /
-        (1000 * 60 * 60 * 24);
+    const lastDateMidnight = new Date(lastDate);
+    lastDateMidnight.setHours(0, 0, 0, 0);
 
+    if (lastDateMidnight.getTime() !== today.getTime() && lastDateMidnight.getTime() !== yesterday.getTime()) {
+      return 0;
+    }
+
+    let streak = 1;
+    for (let i = workoutDates.length - 2; i >= 0; i--) {
+      const curr = workoutDates[i + 1];
+      const prev = workoutDates[i];
+      const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
       if (diffDays === 1) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
+        streak++;
       } else {
-        currentStreak = 1;
+        break;
       }
     }
 
-    return maxStreak;
+    return streak;
   };
 
   useEffect(() => {
