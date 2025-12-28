@@ -82,6 +82,14 @@ export default function Workouts() {
 
   const addWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if profile is set
+    const savedProfile = localStorage.getItem('profile');
+    if (!savedProfile) {
+      alert('Please set up your profile first.');
+      return;
+    }
+
     if (!exercise || !sets || !reps || !weight || !userId) return;
 
     try {
@@ -102,6 +110,33 @@ export default function Workouts() {
         const newWorkout = await response.json();
         const newWorkouts = [...workouts, newWorkout];
         setWorkouts(newWorkouts);
+
+        // Update workout streak
+        const currentDate = new Date().toISOString().split('T')[0];
+        const lastWorkoutDate = localStorage.getItem('lastWorkoutDate');
+        let streak = parseInt(localStorage.getItem('userStreak') || '0');
+
+        if (!lastWorkoutDate) {
+          // First workout
+          streak = 1;
+        } else {
+          const lastDate = new Date(lastWorkoutDate);
+          const current = new Date(currentDate);
+          const diffTime = current.getTime() - lastDate.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 1) {
+            // Consecutive day
+            streak += 1;
+          } else if (diffDays > 1) {
+            // Missed days, reset streak
+            streak = 1;
+          }
+          // If diffDays === 0, already logged today, no change
+        }
+
+        localStorage.setItem('userStreak', streak.toString());
+        localStorage.setItem('lastWorkoutDate', currentDate);
 
         // Check for achievements
         const savedProfile = localStorage.getItem('profile');

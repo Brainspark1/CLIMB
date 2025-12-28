@@ -84,6 +84,14 @@ export default function Diet() {
 
   const addMeal = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if profile is set
+    const savedProfile = localStorage.getItem('profile');
+    if (!savedProfile) {
+      alert('Please set up your profile first.');
+      return;
+    }
+
     if (!name || !calories || !protein || !carbs || !fat || !userId) return;
 
     const currentUserId = userId;
