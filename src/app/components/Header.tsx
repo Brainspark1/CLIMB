@@ -29,45 +29,48 @@ export default function Header() {
   const getUserId = async (): Promise<string | null> => {
     if (typeof window === 'undefined') return null;
 
-    const savedProfile = localStorage.getItem('profile');
-    let userName = 'Anonymous User';
+    let userId = localStorage.getItem('userId');
+    if (userId) {
+      // Verify user exists in database
+      const findResponse = await fetch(`/api/users?userId=${encodeURIComponent(userId)}`);
+      if (findResponse.ok) {
+        return userId;
+      }
+    }
 
+    // Generate new unique user ID if not found or doesn't exist
+    userId = crypto.randomUUID();
+    localStorage.setItem('userId', userId);
+
+    const savedProfile = localStorage.getItem('profile');
     if (savedProfile) {
       const profile = JSON.parse(savedProfile);
-      userName = profile.name || 'Anonymous User';
-    }
-
-    const findResponse = await fetch(
-      `/api/users?name=${encodeURIComponent(userName)}`
-    );
-
-    if (findResponse.ok) {
-      const user = await findResponse.json();
-      localStorage.setItem('userId', user.id);
-      return user.id;
-    }
-
-    const createResponse = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: userName }),
-    });
-
-    if (createResponse.ok) {
-      const user = await createResponse.json();
-      localStorage.setItem('userId', user.id);
-      return user.id;
+      // Create new user with the unique ID and name
+      const createResponse = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, name: profile.name || 'You' }),
+      });
+      if (createResponse.ok) {
+        return userId;
+      }
     }
 
     return null;
   };
 
-  const calculateStreak = (workouts: { date: string }[]) => {
-    if (workouts.length === 0) return 0;
+  const calculateStreak = (workouts: { date: string }[], meals: { date: string }[]) => {
+    // Combine workout and meal dates
+    const workoutDates = workouts.map(w => w.date.split('T')[0]);
+    const mealDates = meals.map(m => m.date.split('T')[0]);
+    const allActivityDates = [...new Set([...workoutDates, ...mealDates])].sort();
 
-    const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a.getTime() - b.getTime());
+    if (allActivityDates.length === 0) return 0;
 
-    const lastDate = workoutDates[workoutDates.length - 1];
+    // Convert to Date objects for easier comparison
+    const activityDates = allActivityDates.map(date => new Date(date));
+
+    const lastDate = activityDates[activityDates.length - 1];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
@@ -76,14 +79,15 @@ export default function Header() {
     const lastDateMidnight = new Date(lastDate);
     lastDateMidnight.setHours(0, 0, 0, 0);
 
+    // Check if last activity was today or yesterday
     if (lastDateMidnight.getTime() !== today.getTime() && lastDateMidnight.getTime() !== yesterday.getTime()) {
       return 0;
     }
 
     let streak = 1;
-    for (let i = workoutDates.length - 2; i >= 0; i--) {
-      const curr = workoutDates[i + 1];
-      const prev = workoutDates[i];
+    for (let i = activityDates.length - 2; i >= 0; i--) {
+      const curr = activityDates[i + 1];
+      const prev = activityDates[i];
       const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
       if (diffDays === 1) {
         streak++;
@@ -104,13 +108,29 @@ export default function Header() {
 
     const loadStreak = async () => {
       const userId = await getUserId();
-      if (!userId) return;
+      if (!userId) {
+        console.log('No userId found');
+        return;
+      }
 
-      const response = await fetch(`/api/workouts?userId=${userId}`);
-      if (!response.ok) return;
+      // Fetch both workouts and meals
+      const [workoutsResponse, mealsResponse] = await Promise.all([
+        fetch(`/api/workouts?userId=${userId}`),
+        fetch(`/api/meals?userId=${userId}`)
+      ]);
 
-      const workouts = await response.json();
-      const userStreak = calculateStreak(workouts);
+      if (!workoutsResponse.ok || !mealsResponse.ok) {
+        console.log('Failed to fetch workouts or meals');
+        return;
+      }
+
+      const workouts = await workoutsResponse.json();
+      const meals = await mealsResponse.json();
+      console.log('Workouts:', workouts);
+      console.log('Meals:', meals);
+
+      const userStreak = calculateStreak(workouts, meals);
+      console.log('Calculated streak:', userStreak);
 
       setStreak(userStreak);
       localStorage.setItem('userStreak', userStreak.toString());

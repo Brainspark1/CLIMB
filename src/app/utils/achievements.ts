@@ -102,16 +102,20 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'consistency-king',
     title: 'Consistency King',
-    description: 'Work out for 7 consecutive days',
+    description: 'Stay active for 7 consecutive days (workouts or meals)',
     icon: '👑',
     checkCondition: (data) => {
-      const workoutDates = [...new Set(data.workouts.map(w => w.date.split('T')[0]))].sort();
-      if (workoutDates.length < 7) return false;
+      // Combine workout and meal dates
+      const workoutDates = data.workouts.map(w => w.date.split('T')[0]);
+      const mealDates = data.meals.map(m => m.date.split('T')[0]);
+      const allActivityDates = [...new Set([...workoutDates, ...mealDates])].sort();
 
-      // Check for 7 consecutive days
-      for (let i = workoutDates.length - 7; i < workoutDates.length - 1; i++) {
-        const current = new Date(workoutDates[i]);
-        const next = new Date(workoutDates[i + 1]);
+      if (allActivityDates.length < 7) return false;
+
+      // Check for 7 consecutive days of activity
+      for (let i = allActivityDates.length - 7; i < allActivityDates.length - 1; i++) {
+        const current = new Date(allActivityDates[i]);
+        const next = new Date(allActivityDates[i + 1]);
         const diffTime = Math.abs(next.getTime() - current.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays !== 1) return false;
